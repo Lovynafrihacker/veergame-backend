@@ -1,39 +1,203 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>WinGo Quantum Cyber Terminal Pro</title>
-  <style>
-    :root { 
-      --bg: #030712; 
-      --card-bg: rgba(15, 23, 42, 0.85); 
-      --border: rgba(56, 189, 248, 0.25); 
-      --accent-blue: #38bdf8; 
-      --accent-purple: #c084fc; 
-      --accent-green: #22c55e; 
-      --accent-red: #f43f5e; 
-      --accent-yellow: #eab308;
-      --accent-violet: #8b5cf6; 
-      --text-main: #f8fafc; 
-      --text-muted: #94a3b8; 
-    } 
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VeerGame Terminal</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Courier New', Courier, monospace;
+        }
 
-    * { box-sizing: border-box; font-family: 'Inter', system-ui, -apple-system, sans-serif; }
-    
-    body {
-      margin: 0;
-      background: var(--bg);
-      background-image:
-        radial-gradient(circle at 10% 10%, rgba(56, 189, 248, 0.08) 0px, transparent 40%),
-        radial-gradient(circle at 90% 90%, rgba(192, 132, 252, 0.08) 0px, transparent 40%);
-      background-attachment: fixed;
-      color: var(--text-main);
-      min-height: 100vh;
-      -webkit-font-smoothing: antialiased;
-    }
+        body {
+            background-color: #0d1117;
+            color: #58a6ff;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
 
-    .wrap {
+        .container {
+            width: 100%;
+            max-width: 500px;
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 10px;
+            padding: 25px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+            text-align: center;
+        }
+
+        h2 {
+            color: #7ee787;
+            margin-bottom: 15px;
+        }
+
+        p {
+            color: #8b949e;
+            font-size: 14px;
+            margin-bottom: 20px;
+        }
+
+        input {
+            width: 100%;
+            padding: 12px;
+            margin-bottom: 15px;
+            background: #0d1117;
+            border: 1px solid #30363d;
+            border-radius: 6px;
+            color: #fff;
+            font-size: 16px;
+            outline: none;
+            text-align: center;
+        }
+
+        input:focus {
+            border-color: #58a6ff;
+        }
+
+        button {
+            width: 100%;
+            padding: 12px;
+            background: #238636;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+
+        button:hover {
+            background: #2ea043;
+        }
+
+        .status-msg {
+            margin-top: 15px;
+            font-size: 14px;
+            color: #ffa657;
+        }
+
+        /* Terminal Screen (Hidden by default) */
+        #mainTerminal {
+            display: none;
+            text-align: left;
+        }
+
+        .terminal-box {
+            background: #000;
+            border: 1px solid #238636;
+            padding: 15px;
+            border-radius: 6px;
+            color: #7ee787;
+            font-size: 14px;
+            height: 200px;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <!-- 1. LOGIN / ACCESS REQUEST SCREEN -->
+        <div id="loginScreen">
+            <h2>VeerGame System</h2>
+            <p>Enter your Game ID to request access</p>
+            
+            <input type="text" id="gameIdInput" placeholder="Enter Game ID (e.g. 12345)" />
+            <button id="requestBtn" onclick="requestAccess()">Request Access</button>
+            
+            <div id="statusMsg" class="status-msg"></div>
+        </div>
+
+        <!-- 2. MAIN UNLOCKED TERMINAL SCREEN -->
+        <div id="mainTerminal">
+            <h2>🔓 Access Granted!</h2>
+            <p style="color: #7ee787;">Welcome to VeerGame Terminal System</p>
+            <div class="terminal-box">
+                <p>> System initialized successfully...</p>
+                <p>> Connected to backend server...</p>
+                <p>> Game ID verified & approved.</p>
+                <p>> Ready for commands...</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const BACKEND_URL = "https://veergame-backend-1.onrender.com";
+        let pollInterval = null;
+        let currentGameId = "";
+
+        // Function 1: User Request Access Dabaye
+        function requestAccess() {
+            const gameId = document.getElementById("gameIdInput").value.trim();
+            const statusMsg = document.getElementById("statusMsg");
+            const btn = document.getElementById("requestBtn");
+
+            if (!gameId) {
+                statusMsg.innerText = "⚠️ Please enter a valid Game ID!";
+                return;
+            }
+
+            currentGameId = gameId;
+            btn.disabled = true;
+            statusMsg.innerText = "⏳ Sending request to Telegram Admin...";
+
+            // Send POST Request to Backend
+            fetch(`${BACKEND_URL}/request-access`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ gameId: gameId })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    statusMsg.innerText = "⏳ Request Sent! Waiting for Admin Approval in Telegram...";
+                    // Start checking status every 2 seconds
+                    startPolling(gameId);
+                } else {
+                    statusMsg.innerText = "❌ Error sending request.";
+                    btn.disabled = false;
+                }
+            })
+            .catch(err => {
+                console.error(err);
+                statusMsg.innerText = "❌ Connection Error to Backend Server!";
+                btn.disabled = false;
+            });
+        }
+
+        // Function 2: Continuous Check Karega ki ID Approve Hui ya Nhi
+        function startPolling(gameId) {
+            if (pollInterval) clearInterval(pollInterval);
+
+            pollInterval = setInterval(() => {
+                fetch(`${BACKEND_URL}/check-approval?gameId=${gameId}`)
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data.approved === true) {
+                            clearInterval(pollInterval);
+                            unlockTerminal();
+                        }
+                    })
+                    .catch(err => console.error("Polling error:", err));
+            }, 2000); // Har 2 Second me check karega
+        }
+
+        // Function 3: Terminal Unlock Frame
+        function unlockTerminal() {
+            document.getElementById("loginScreen").style.display = "none";
+            document.getElementById("mainTerminal").style.display = "block";
+        }
+    </script>
+</body>
+</html>
       width: min(480px, 100%);
       margin: auto;
       padding: 16px 12px 90px;
