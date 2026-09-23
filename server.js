@@ -1,30 +1,23 @@
 const express = require('express');
 const cors = require('cors');
-const TelegramBot = require('node-telegram-bot-api');
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Telegram Bot Credentials
-const BOT_TOKEN = process.env.BOT_TOKEN || '8906098215:AAF_SkcJa67Y7rW_73G7zvUxUhUNwE1DZm8'; 
-const ADMIN_CHAT_ID = process.env.ADMIN_CHAT_ID || '7603706655';
+// Telegram Bot Details
+const BOT_TOKEN = '8906098215:AAF_SkcJa67Y7rW_73G7zvUxUhUNwE1DZm8';
+const ADMIN_CHAT_ID = '7603706655';
 
-let bot = null;
-if (BOT_TOKEN) {
-    bot = new TelegramBot(BOT_TOKEN, { polling: true });
-    console.log("Telegram Bot Initialized Successfully!");
-}
-
-// Memory Store for Approved Game IDs
+// Memory Store for Approvals
 const approvedUsers = new Set();
 
-// 1. Root Route (Server Health Check)
+// 1. Root Test Route (Fixes 'Cannot GET /')
 app.get('/', (req, res) => {
-    res.send("VeerGame Backend Server Active & Telegram Bot Connected!");
+    res.send("VeerGame Backend Server Active & Ready!");
 });
 
-// 2. Web App Access Request Route
+// 2. Web App Access Request Route (Sends Telegram Message)
 app.post('/request-access', async (req, res) => {
     const { gameId } = req.body;
     if (!gameId) {
@@ -33,7 +26,49 @@ app.post('/request-access', async (req, res) => {
 
     console.log(`[REQUEST] Access requested for Game ID: ${gameId}`);
 
-    // Telegram Bot par Direct Admin ko Request Bhejna
+    // Direct Telegram API Call
+    try {
+        const textMessage = `🚨 *New Access Request Received!*\n\n🎮 *Game ID:* \`${gameId}\`\n\nTo approve this user, send command:\n\`/approve ${gameId}\``;
+        const telegramUrl = `https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`;
+        
+        await fetch(telegramUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                chat_id: ADMIN_CHAT_ID,
+                text: textMessage,
+                parse_mode: 'Markdown'
+            })
+        });
+    } catch (error) {
+        console.error("Telegram send error:", error);
+    }
+
+    res.json({ success: true, message: "Request sent to Telegram Admin!" });
+});
+
+// 3. Approval Check Route (Web app checks status)
+app.get('/check-approval', (req, res) => {
+    const gameId = req.query.gameId;
+    if (gameId && approvedUsers.has(String(gameId))) {
+        return res.json({ approved: true });
+    }
+    res.json({ approved: false });
+});
+
+// 4. Admin Approval Endpoint (Hit to Approve ID)
+app.all('/approve-user', (req, res) => {
+    const gameId = req.query.gameId || req.body.gameId;
+    if (gameId) {
+        approvedUsers.add(String(gameId));
+        console.log(`[APPROVED] Game ID ${gameId} approved!`);
+        return res.send(`✅ Success! Game ID ${gameId} is now Approved! You can now use the terminal.`);
+    }
+    res.status(400).send("Error: Game ID missing");
+});
+
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
     if (bot && ADMIN_CHAT_ID) {
         try {
             await bot.sendMessage(
