@@ -1,166 +1,126 @@
-const express = require('express');
-const cors = require('cors');
+const express = require("express");
+const cors = require("cors");
+const TelegramBot = require("node-telegram-bot-api");
 
 const app = express();
+
+// Enable CORS & JSON Body Parsing
 app.use(cors());
 app.use(express.json());
 
-// Telegram Bot Details
-const BOT_TOKEN = '8906098215:AAF_SkcJa67Y7rW_73G7zvUxUhUNwE1DZm8';
-const ADMIN_CHAT_ID = '7603706655';
+// Telegram Credentials Setup
+const BOT_TOKEN = "8906098215:AAF_SkcJa67Y7rW_73G7zvUxUhUNwE1DZm8"; 
+const ADMIN_CHAT_ID = "7603706655"; 
 
-// Memory Store for Approvals
-const approvedUsers = new Set();
+// Initialize Telegram Bot
+const bot = new TelegramBot(BOT_TOKEN, { polling: true });
 
-// 1. Root Test Route (Fixes 'Cannot GET /')
-app.get('/', (req, res) => {
-    res.send("VeerGame Backend Server Active & Ready!");
+// Temporary Database (In-Memory Object)
+const db = {};
+
+// Root Test Route
+app.get("/", (req, res) => {
+  res.send("VeerGame Backend Server Running Successfully!");
 });
 
-// 2. Web App Access Request Route (Sends Telegram Message)
-app.post('/request-access', async (req, res) => {
-    const { gameId } = req.body;
-    if (!gameId) {
-        return res.status(400).json({ success: false, message: "Game ID missing" });
+/**
+ * 1. API Endpoint: Website Request bhejti hai Verification ke liye
+ */
+app.post("/api/request-access", (req, res) => {
+  const { gameId } = req.body;
+
+  if (!gameId) {
+    return res.status(400).json({ success: false, error: "Game ID required" });
+  }
+
+  // ID Status PENDING mark karein
+  db[gameId] = "PENDING";
+
+  // Telegram Alert Message
+  const msgText = `⚠️ <b>NEW ID VERIFICATION REQUEST</b>\n\n` +
+                  `<b>Game ID:</b> <code>${gameId}</code>\n\n` +
+                  `<i>Agent Panel me check karein ki ₹300 Deposit hua hai ya nahi, uske baad button dabayein:</i>`;
+
+  // Approve & Reject Inline Buttons
+  const options = {
+    parse_mode: "HTML",
+    reply_markup: {
+      inline_keyboard: [
+        [
+          { text: "✅ Approve & Unlock", callback_data: `approve_${gameId}` },
+          { text: "❌ Reject", callback_data: `reject_${gameId}` }
+        ]
+      ]
     }
+  };
 
-    console.log(`[REQUEST] Access requested for Game ID: ${gameId}`);
-
-    // Direct Telegram API Call
-    try {
-        const textMessage = `🚨 *New Access Request Received!*\n\n🎮 *Game ID:* \`${gameId}\`\n\nTo approve this user, send command:\n\`/approve ${gameId}\``;
-        const telegramUrl = `https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`;
-        
-        await fetch(telegramUrl, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                chat_id: ADMIN_CHAT_ID,
-                text: textMessage,
-                parse_mode: 'Markdown'
-            })
-        });
-    } catch (error) {
-        console.error("Telegram send error:", error);
-    }
-
-    res.json({ success: true, message: "Request sent to Telegram Admin!" });
-});
-
-// 3. Approval Check Route (Web app checks status)
-app.get('/check-approval', (req, res) => {
-    const gameId = req.query.gameId;
-    if (gameId && approvedUsers.has(String(gameId))) {
-        return res.json({ approved: true });
-    }
-    res.json({ approved: false });
-});
-
-// 4. Admin Approval Endpoint (Hit to Approve ID)
-app.all('/approve-user', (req, res) => {
-    const gameId = req.query.gameId || req.body.gameId;
-    if (gameId) {
-        approvedUsers.add(String(gameId));
-        console.log(`[APPROVED] Game ID ${gameId} approved!`);
-        return res.send(`✅ Success! Game ID ${gameId} is now Approved! You can now use the terminal.`);
-    }
-    res.status(400).send("Error: Game ID missing");
-});
-
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
-    if (bot && ADMIN_CHAT_ID) {
-        try {
-            await bot.sendMessage(
-                ADMIN_CHAT_ID, 
-                `🚨 *New Access Request Received!*\n\n🎮 *Game ID:* \`${gameId}\`\n\nClick below to approve or reject:`, 
-                {
-                    parse_mode: 'Markdown',
-                    reply_markup: {
-                        inline_keyboard: [
-                            [
-                                { text: "✅ Approve", callback_data: `approve_${gameId}` },
-                                { text: "❌ Reject", callback_data: `reject_${gameId}` }
-                            ]
-                        ]
-                    }
-                }
-            );
-        } catch (error) {
-            console.error("Failed to send Telegram message:", error.message);
-        }
-    }
-
-    res.json({ success: true, message: "Request sent to Admin Bot!" });
-});
-
-// Telegram Bot Button Click Handler (Approve / Reject Action)
-if (bot) {
-    bot.on('callback_query', async (query) => {
-        const data = query.data;
-        const chatId = query.message.chat.id;
-        const messageId = query.message.message_id;
-
-        if (data.startsWith('approve_')) {
-            const gameId = data.replace('approve_', '');
-            approvedUsers.add(String(gameId));
-            
-            await bot.editMessageText(`✅ *Game ID ${gameId} HAS BEEN APPROVED!*`, {
-                chat_id: chatId,
-                message_id: messageId,
-                parse_mode: 'Markdown'
-            });
-            await bot.answerCallbackQuery(query.id, { text: `User ${gameId} Approved!` });
-            
-        } else if (data.startsWith('reject_')) {
-            const gameId = data.replace('reject_', '');
-            approvedUsers.delete(String(gameId));
-
-            await bot.editMessageText(`❌ *Game ID ${gameId} WAS REJECTED!*`, {
-                chat_id: chatId,
-                message_id: messageId,
-                parse_mode: 'Markdown'
-            });
-            await bot.answerCallbackQuery(query.id, { text: `User ${gameId} Rejected!` });
-        }
+  // Telegram Par Message Bhejo
+  bot.sendMessage(ADMIN_CHAT_ID, msgText, options)
+    .then(() => {
+      res.json({ success: true, message: "Verification Request Sent to Admin", gameId });
+    })
+    .catch((err) => {
+      console.error("Telegram Error:", err.message);
+      res.status(500).json({ success: false, error: "Failed to notify admin via Telegram" });
     });
-
-    // Start Command Response
-    bot.onText(/\/start/, (msg) => {
-        bot.sendMessage(msg.chat.id, `👋 Hello Admin! VeerGame System is active.\nYour Chat ID: \`${msg.chat.id}\``, { parse_mode: 'Markdown' });
-    });
-}
-
-// 3. Web App Approval Polling Route
-app.get('/check-approval', (req, res) => {
-    const gameId = req.query.gameId;
-    if (gameId && approvedUsers.has(String(gameId))) {
-        return res.json({ approved: true });
-    }
-    res.json({ approved: false });
 });
 
-// 4. Admin Manual Approval Endpoint
-app.post('/approve-user', (req, res) => {
-    const { gameId } = req.body;
-    if (gameId) {
-        approvedUsers.add(String(gameId));
-        console.log(`[APPROVED] Game ID ${gameId} approved!`);
-        return res.json({ success: true, message: `Game ID ${gameId} approved` });
-    }
-    res.status(400).json({ success: false, message: "Invalid Game ID" });
+/**
+ * 2. API Endpoint: Website Status Check karti hai (Polling)
+ */
+app.get("/api/check-status", (req, res) => {
+  const { gameId } = req.query;
+
+  if (!gameId) {
+    return res.status(400).json({ error: "Game ID parameter missing" });
+  }
+
+  const status = db[gameId] || "LOCKED";
+  res.json({ gameId, status });
 });
 
+/**
+ * 3. Telegram Bot Callback Handler: Approve/Reject Button click handle karna
+ */
+bot.on("callback_query", (query) => {
+  const data = query.data;
+  const chatId = query.message.chat.id;
+  const messageId = query.message.message_id;
+
+  if (data.startsWith("approve_")) {
+    const targetGameId = data.split("_")[1];
+    db[targetGameId] = "APPROVED";
+
+    bot.answerCallbackQuery(query.id, { text: `Game ID ${targetGameId} Approved!` });
+
+    bot.editMessageText(
+      `✅ <b>ID APPROVED!</b>\n\nGame ID: <code>${targetGameId}</code>\n\n<b>Status:</b> Prediction Automatically Unlocked on Website.`,
+      {
+        chat_id: chatId,
+        message_id: messageId,
+        parse_mode: "HTML"
+      }
+    );
+
+  } else if (data.startsWith("reject_")) {
+    const targetGameId = data.split("_")[1];
+    db[targetGameId] = "REJECTED";
+
+    bot.answerCallbackQuery(query.id, { text: `Game ID ${targetGameId} Rejected!` });
+
+    bot.editMessageText(
+      `❌ <b>ID REJECTED!</b>\n\nGame ID: <code>${targetGameId}</code>\n\n<b>Status:</b> Verification Failed.`,
+      {
+        chat_id: chatId,
+        message_id: messageId,
+        parse_mode: "HTML"
+      }
+    );
+  }
+});
+
+// Port Configuration for Render.com
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
-    const { gameId } = req.body;
-    if (gameId) {
-        approvedUsers.add(String(gameId));
-        console.log(`Game ID ${gameId} approved!`);
-        return res.json({ success: true, message: `Game ID ${gameId} approved` });
-    }
-    res.status(400).json({ success: false, message: "Invalid ID" });
+app.listen(PORT, () => {
+  console.log(`Server started on port ${PORT}`);
 });
-
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
