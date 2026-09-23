@@ -1,40 +1,633 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<title>WinGo 30s Official Quantum Predictor</title>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<style>
-  * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
-  
-  body {
-    background: #090d16;
-    background-image: 
-      radial-gradient(circle at 50% 0%, rgba(56, 189, 248, 0.08), transparent 70%),
-      radial-gradient(circle at 100% 100%, rgba(234, 179, 8, 0.05), transparent 50%);
-    color: #f1f5f9;
-    display: flex;
-    justify-content: center;
-    padding: 12px;
-    padding-bottom: 75px;
-    min-height: 100vh;
-    overflow-x: hidden;
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WinGo Quantum Cyber Terminal Pro</title>
+  <style>
+    :root { 
+      --bg: #030712; 
+      --card-bg: rgba(15, 23, 42, 0.85); 
+      --border: rgba(56, 189, 248, 0.25); 
+      --accent-blue: #38bdf8; 
+      --accent-purple: #c084fc; 
+      --accent-green: #22c55e; 
+      --accent-red: #f43f5e; 
+      --accent-yellow: #eab308;
+      --accent-violet: #8b5cf6; 
+      --text-main: #f8fafc; 
+      --text-muted: #94a3b8; 
+    } 
+
+    * { box-sizing: border-box; font-family: 'Inter', system-ui, -apple-system, sans-serif; }
+    
+    body {
+      margin: 0;
+      background: var(--bg);
+      background-image:
+        radial-gradient(circle at 10% 10%, rgba(56, 189, 248, 0.08) 0px, transparent 40%),
+        radial-gradient(circle at 90% 90%, rgba(192, 132, 252, 0.08) 0px, transparent 40%);
+      background-attachment: fixed;
+      color: var(--text-main);
+      min-height: 100vh;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .wrap {
+      width: min(480px, 100%);
+      margin: auto;
+      padding: 16px 12px 90px;
+    }
+
+    .card {
+      background: var(--card-bg);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      padding: 18px;
+      margin-bottom: 14px;
+      box-shadow: 0 8px 24px -8px rgba(0, 0, 0, 0.5);
+      position: relative;
+    }
+
+    .terminal-lock {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(3, 7, 18, 0.94);
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
+      border-radius: 18px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      z-index: 50;
+      color: var(--accent-blue);
+      font-weight: 700;
+      font-size: 15px;
+      text-align: center;
+      padding: 20px;
+    }
+
+    .terminal-lock .lock-icon { font-size: 30px; margin-bottom: 6px; }
+    .terminal-lock span { margin-top: 6px; color: var(--text-muted); font-size: 12px; font-weight: 400; line-height: 1.4; }
+
+    h1 {
+      font-size: 20px;
+      margin: 0 0 4px;
+      background: linear-gradient(135deg, #38bdf8, #c084fc);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      font-weight: 800;
+      letter-spacing: 0.8px;
+      text-transform: uppercase;
+    }
+
+    .muted { color: var(--text-muted); font-size: 12px; font-weight: 500; }
+    .row { display: flex; gap: 8px; }
+    .row > * { flex: 1; }
+
+    input, button, select {
+      width: 100%;
+      border-radius: 12px;
+      padding: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      background: rgba(15, 23, 42, 0.9);
+      color: #fff;
+      font-size: 13px;
+      outline: none;
+    }
+
+    input:focus, select:focus { border-color: var(--accent-blue); }
+
+    button {
+      background: linear-gradient(135deg, #0284c7, #2563eb);
+      border: 0;
+      font-weight: 700;
+      cursor: pointer;
+      color: #fff;
+    }
+    button:active { transform: scale(0.98); }
+
+    button.secondary {
+      background: rgba(30, 41, 59, 0.8);
+      border: 1px solid var(--border);
+    }
+
+    .status {
+      padding: 10px 14px;
+      border-radius: 12px;
+      background: rgba(15, 23, 42, 0.7);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      margin-top: 10px;
+      font-size: 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; flex-shrink: 0; }
+    .dot.ok { background: var(--accent-green); box-shadow: 0 0 8px var(--accent-green); }
+    .dot.bad { background: var(--accent-red); box-shadow: 0 0 8px var(--accent-red); }
+    .dot.pending { background: var(--accent-yellow); box-shadow: 0 0 8px var(--accent-yellow); }
+
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+    .stat {
+      padding: 10px;
+      border-radius: 12px;
+      background: rgba(15, 23, 42, 0.6);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      text-align: center;
+    }
+    .stat b { display: block; font-size: 18px; margin-top: 2px; color: #fff; }
+
+    .signal {
+      text-align: center;
+      padding: 20px 14px;
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      background: rgba(15, 23, 42, 0.85);
+    }
+
+    .signal .big { font-size: 36px; font-weight: 900; letter-spacing: 2px; margin: 6px 0; }
+    .signal-BIG { color: var(--accent-green) !important; text-shadow: 0 0 12px rgba(34, 197, 94, 0.6) !important; }
+    .signal-SMALL { color: var(--accent-red) !important; text-shadow: 0 0 12px rgba(244, 63, 94, 0.6) !important; }
+
+    .progress {
+      height: 6px;
+      background: rgba(30, 41, 59, 0.8);
+      border-radius: 10px;
+      overflow: hidden;
+    }
+    .progress i {
+      display: block;
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, var(--accent-blue), var(--accent-purple));
+      transition: width 0.3s ease-out;
+    }
+
+    table { width: 100%; border-collapse: collapse; font-size: 12px; }
+    th, td { padding: 8px 4px; border-bottom: 1px solid rgba(255, 255, 255, 0.05); text-align: center; }
+    th { color: var(--text-muted); font-weight: 600; text-transform: uppercase; font-size: 10px; }
+
+    .badge { padding: 2px 6px; border-radius: 4px; font-weight: 700; font-size: 10px; display: inline-block; }
+    .badge-BIG { background: rgba(34, 197, 94, 0.2); color: var(--accent-green); }
+    .badge-SMALL { background: rgba(244, 63, 94, 0.2); color: var(--accent-red); }
+
+    .color-RED { color: var(--accent-red); font-weight: bold; }
+    .color-GREEN { color: var(--accent-green); font-weight: bold; }
+    .color-VIOLET { color: var(--accent-violet); font-weight: bold; }
+
+    .log {
+      height: 100px;
+      overflow-y: auto;
+      font: 11px/1.4 'Courier New', monospace;
+      color: #a5f3fc;
+      background: rgba(3, 7, 18, 0.95);
+      padding: 8px;
+      border-radius: 10px;
+      border: 1px solid rgba(255, 255, 255, 0.06);
+    }
+
+    .toast {
+      position: fixed;
+      left: 50%;
+      bottom: 20px;
+      transform: translateX(-50%);
+      background: rgba(15, 23, 42, 0.95);
+      border: 1px solid var(--accent-blue);
+      border-radius: 20px;
+      padding: 8px 16px;
+      font-size: 12px;
+      color: #fff;
+      display: none;
+      z-index: 99;
+    }
+  </style>
+</head>
+<body>
+
+<div class="wrap">
+  <!-- Auth Header Card -->
+  <div class="card">
+    <h1>WinGo Quantum Stream</h1>
+    <div class="muted">LIVE RESULT TERMINAL • PRO EDITION</div>
+    
+    <div class="row" style="margin-top: 12px;">
+      <input type="text" id="gameUserIdInput" placeholder="Enter Game User ID">
+      <button id="verifyBtn">Request Access</button>
+    </div>
+    <div class="status" id="authStatusText">
+      <span class="dot bad"></span> Status: Locked (Enter ID)
+    </div>
+  </div>
+
+  <!-- Signal Card -->
+  <div class="card">
+    <div class="terminal-lock" id="lockSignal">
+      <div class="lock-icon">🔒</div>
+      TERMINAL LOCKED
+      <span id="lockMsg">Enter Game ID and Request Access.<br>Approval is required from Bot.</span>
+    </div>
+
+    <div class="row" style="align-items: center; margin-bottom: 10px;">
+      <div>
+        <div class="muted">TIME REMAINING</div>
+        <b id="countdown" style="font-size: 20px; color: var(--accent-blue);">30s</b>
+      </div>
+      <div style="text-align: right;">
+        <div class="muted">TARGET PERIOD</div>
+        <b id="nextPeriod" style="font-size: 15px; color: #fff;">Syncing...</b>
+      </div>
+    </div>
+
+    <div class="signal">
+      <div class="muted" id="targetLabel">TARGET PERIOD: -</div>
+      <div id="signalText" class="big">LOCKED</div>
+      <div class="muted" id="reasonText">Bot Approval Required</div>
+    </div>
+
+    <div style="margin-top: 12px;">
+      <div class="row" style="margin-bottom: 4px;">
+        <span class="muted" id="confidenceText">CONFIDENCE: --%</span>
+      </div>
+      <div class="progress"><i id="confidenceBar"></i></div>
+    </div>
+
+    <div class="status" id="connection" style="margin-top: 12px;">
+      <span class="dot bad"></span> Terminal Locked
+    </div>
+
+    <div class="row" style="margin-top: 10px;">
+      <button id="copyBtn">Copy Signal</button>
+      <button class="secondary" id="refreshBtn">↻ Refresh</button>
+      <button class="secondary" id="clearLogBtn">Clear Log</button>
+    </div>
+  </div>
+
+  <!-- History Card -->
+  <div class="card">
+    <div class="terminal-lock" id="lockHistory">
+      <div class="lock-icon">🔒</div>
+      HISTORY LOCKED
+      <span>Admin Approval Needed</span>
+    </div>
+
+    <div class="grid" style="margin-bottom: 10px;">
+      <div class="stat"><span class="muted">Tracked</span><b id="tracked">0</b></div>
+      <div class="stat"><span class="muted">Matched</span><b id="matched">0</b></div>
+      <div class="stat"><span class="muted">Missed</span><b id="missed">0</b></div>
+      <div class="stat"><span class="muted">Accuracy</span><b id="observed">--%</b></div>
+    </div>
+
+    <div class="row" style="margin-bottom: 8px;">
+      <select id="resultFilter">
+        <option value="ALL">All Results</option>
+        <option value="BIG">BIG</option>
+        <option value="SMALL">SMALL</option>
+      </select>
+      <select id="colorFilter">
+        <option value="ALL">All Colors</option>
+        <option value="RED">RED</option>
+        <option value="GREEN">GREEN</option>
+        <option value="VIOLET">VIOLET</option>
+      </select>
+    </div>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Period</th>
+          <th>Num</th>
+          <th>Result</th>
+          <th>Color</th>
+        </tr>
+      </thead>
+      <tbody id="historyBody">
+        <tr><td colspan="4" class="muted">Awaiting Admin Approval</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Terminal Log Card -->
+  <div class="card">
+    <div class="muted" style="margin-bottom: 6px;">QUANTUM LOG OUTPUT</div>
+    <div class="log" id="terminalLog"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast">Notification</div>
+
+<script>
+  const API_URL = "https://draw.ar-lottery01.com/WinGo/WinGo_30S/GetHistoryIssuePage.json";
+  const BACKEND_URL = "https://veergame-backend-1.onrender.com";
+
+  let isVerified = false; 
+  let currentUserId = "";
+  let approvalPoller = null;
+  let history = [];
+  let pending = null;
+  let lastIssue = "";
+  let pollTimer = null;
+  let countdownTimer = null;
+  let seconds = 30;
+  let stats = JSON.parse(localStorage.getItem("wingo_stats") || '{"tracked":0,"matched":0,"missed":0}');
+
+  const $ = id => document.getElementById(id);
+
+  function log(msg) {
+    const el = $("terminalLog");
+    const line = document.createElement("div");
+    line.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
+    el.appendChild(line);
+    el.scrollTop = el.scrollHeight;
   }
 
-  /* Pop-up Modal Styling */
-  .popup-overlay {
-    position: fixed;
-    top: 0; left: 0; width: 100%; height: 100%;
-    background: rgba(3, 7, 18, 0.85);
-    backdrop-filter: blur(10px);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    z-index: 2000;
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity 0.4s ease;
-    padding: 16px;
+  function toast(msg) {
+    const t = $("toast");
+    t.textContent = msg;
+    t.style.display = "block";
+    clearTimeout(window.__toast);
+    window.__toast = setTimeout(() => t.style.display = "none", 1800);
+  }
+
+  function saveStats() {
+    localStorage.setItem("wingo_stats", JSON.stringify(stats));
+    renderStats();
+  }
+
+  function renderStats() {
+    $("tracked").textContent = stats.tracked;
+    $("matched").textContent = stats.matched;
+    $("missed").textContent = stats.missed;
+    const total = stats.matched + stats.missed;
+    const pct = total ? ((stats.matched / total) * 100).toFixed(1) : "--";
+    $("observed").textContent = pct === "--" ? "--%" : pct + "%";
+    $("confidenceText").textContent = pct === "--" ? "CONFIDENCE: --%" : `CONFIDENCE: ${pct}%`;
+    $("confidenceBar").style.width = pct === "--" ? "0%" : Math.min(100, Number(pct)) + "%";
+  }
+
+  function updateLockState(locked) {
+    isVerified = !locked;
+    if (locked) {
+      $("lockSignal").style.display = "flex";
+      $("lockHistory").style.display = "flex";
+      $("connection").innerHTML = `<span class="dot bad"></span> Terminal Locked`;
+      $("signalText").textContent = "LOCKED";
+      $("signalText").className = "big";
+      $("reasonText").textContent = "Bot Approval Required";
+    } else {
+      $("lockSignal").style.display = "none";
+      $("lockHistory").style.display = "none";
+      $("connection").innerHTML = `<span class="dot ok"></span> Connected • Live Stream`;
+      fetchLive();
+      startPolling();
+    }
+  }
+
+  function normalize(data) {
+    const list = data?.data?.list;
+    return Array.isArray(list) ? list : [];
+  }
+
+  function resultOf(n) {
+    const num = Number(n);
+    if (isNaN(num)) return "-";
+    return num >= 5 ? "BIG" : "SMALL";
+  }
+
+  function renderHistory() {
+    if (!isVerified) return;
+    const tbody = $("historyBody");
+    const rf = $("resultFilter").value;
+    const cf = $("colorFilter").value;
+    
+    const filtered = history.filter(x => {
+      const n = Number(x.number ?? x.premium);
+      const result = resultOf(n);
+      const colors = String(x.color ?? "").toUpperCase();
+      return (rf === "ALL" || result === rf) && (cf === "ALL" || colors.includes(cf));
+    });
+
+    if (!filtered.length) {
+      tbody.innerHTML = `<tr><td colspan="4" class="muted">No data available</td></tr>`;
+      return;
+    }
+
+    let rowsHTML = "";
+    filtered.slice(0, 20).forEach(item => {
+      const issue = extractPeriod(item);
+      const num = String(item.number ?? item.premium ?? "-");
+      const result = resultOf(num);
+      const color = String(item.color ?? "-").toUpperCase();
+      
+      let colorHTML = color;
+      if (color.includes("RED")) colorHTML = `<span class="color-RED">RED</span>`;
+      else if (color.includes("GREEN")) colorHTML = `<span class="color-GREEN">GREEN</span>`;
+      else if (color.includes("VIOLET")) colorHTML = `<span class="color-VIOLET">VIOLET</span>`;
+
+      const resultBadge = result !== "-" ? `<span class="badge badge-${result}">${result}</span>` : "-";
+
+      rowsHTML += `
+        <tr>
+          <td>${issue}</td>
+          <td><b>${num}</b></td>
+          <td>${resultBadge}</td>
+          <td>${colorHTML}</td>
+        </tr>
+      `;
+    });
+    tbody.innerHTML = rowsHTML;
+  }
+
+  function extractPeriod(item) {
+    const raw = item?.issueNumber ?? item?.issue ?? "";
+    return String(raw).trim();
+  }
+
+  function getNextPeriod(currentPeriod) {
+    if (!currentPeriod || currentPeriod === "-") return "-";
+    try {
+      const cleanPeriod = currentPeriod.replace(/\D/g, "");
+      if (!cleanPeriod) return "-";
+      const bigNum = BigInt(cleanPeriod);
+      return (bigNum + 1n).toString();
+    } catch (e) {
+      return String(Number(currentPeriod) + 1);
+    }
+  }
+
+  function makePrediction(list) {
+    if (!list || list.length < 5) return null;
+
+    const nums = list.slice(0, 15).map(x => Number(x.number ?? x.premium)).filter(n => !isNaN(n));
+    if (nums.length < 5) return null;
+
+    const results = nums.map(resultOf);
+    
+    let streakCount = 1;
+    for (let i = 1; i < results.length; i++) {
+      if (results[i] === results[0]) streakCount++;
+      else break;
+    }
+
+    if (streakCount >= 3) {
+      return { signal: results[0], reason: `Trend Flow (${streakCount}x)` };
+    }
+
+    const emaShort = (nums[0] * 3 + nums[1] * 2 + nums[2] * 1) / 6;
+    const emaLong = nums.slice(0, 8).reduce((a, b) => a + b, 0) / 8;
+
+    let signal = emaShort >= emaLong ? "BIG" : "SMALL";
+    let reason = "Quantum Engine Signal";
+
+    return { signal, reason };
+  }
+
+  async function fetchLive() {
+    if (!isVerified) return;
+    try {
+      const res = await fetch(API_URL + "?ts=" + Date.now());
+      if (!res.ok) throw new Error("HTTP Error");
+      const json = await res.json();
+      const list = normalize(json);
+
+      if (!list.length) return;
+
+      history = list;
+      const latest = list[0];
+      const issue = extractPeriod(latest);
+
+      if (issue && issue !== lastIssue) {
+        lastIssue = issue;
+        seconds = 30;
+        renderHistory();
+        $("connection").innerHTML = `<span class="dot ok"></span> Connected • Live Stream`;
+        log(`Fetched Issue: ${issue}`);
+      }
+
+      const next = getNextPeriod(issue);
+      $("nextPeriod").textContent = next;
+      $("targetLabel").textContent = "TARGET PERIOD: " + next;
+
+      evaluatePending(list);
+
+      const p = makePrediction(list);
+      if (p) {
+        const signalEl = $("signalText");
+        signalEl.textContent = p.signal;
+        signalEl.className = "big signal-" + p.signal;
+        $("reasonText").textContent = p.reason;
+        pending = { period: next, signal: p.signal };
+      }
+    } catch (e) {
+      $("connection").innerHTML = `<span class="dot bad"></span> Network Error`;
+    }
+  }
+
+  function evaluatePending(list) {
+    if (!pending) return;
+    const found = list.find(x => extractPeriod(x) === String(pending.period));
+    if (!found) return;
+
+    const actual = resultOf(found.number ?? found.premium);
+    if (actual !== "BIG" && actual !== "SMALL") return;
+
+    stats.tracked++;
+    if (actual === pending.signal) {
+      stats.matched++;
+      log(`Result Matched for ${pending.period}!`);
+    } else {
+      stats.missed++;
+      log(`Result Missed for ${pending.period}`);
+    }
+
+    pending = null;
+    saveStats();
+  }
+
+  function startPolling() {
+    clearInterval(pollTimer);
+    fetchLive();
+    pollTimer = setInterval(fetchLive, 2500);
+  }
+
+  function startCountdown() {
+    clearInterval(countdownTimer);
+    countdownTimer = setInterval(() => {
+      if (!isVerified) return;
+      seconds--;
+      if (seconds < 0) seconds = 30;
+      $("countdown").textContent = seconds + "s";
+    }, 1000);
+  }
+
+  // Dynamic Route Approval Checker (Handles all possible backend URL paths)
+  async function checkBotApproval() {
+    if (!currentUserId || isVerified) return;
+
+    const testUrls = [
+      `${BACKEND_URL}/check-approval?gameId=${encodeURIComponent(currentUserId)}&t=${Date.now()}`,
+      `${BACKEND_URL}/api/check-approval?gameId=${encodeURIComponent(currentUserId)}&t=${Date.now()}`,
+      `${BACKEND_URL}/approval-status?gameId=${encodeURIComponent(currentUserId)}&t=${Date.now()}`,
+      `${BACKEND_URL}/users/status?gameId=${encodeURIComponent(currentUserId)}&t=${Date.now()}`
+    ];
+
+    for (let url of testUrls) {
+      try {
+        const res = await fetch(url);
+        if (res.status === 200) {
+          const data = await res.json();
+          const isApproved = 
+            data.approved === true || 
+            data.status === "approved" || 
+            data.status === "APPROVED" ||
+            data.isApproved === true ||
+            data.success === true;
+
+          if (isApproved) {
+            clearInterval(approvalPoller);
+            $("authStatusText").innerHTML = `<span class="dot ok"></span> Approved & Unlocked!`;
+            $("lockMsg").textContent = "Approved!";
+            log(`[SUCCESS] ID ${currentUserId} Approved by Bot.`);
+            toast("Access Approved!");
+            updateLockState(false);
+            return;
+          } else {
+            log(`[POLL] Connected to backend. Waiting for Bot Approval for ID ${currentUserId}...`);
+            return;
+          }
+        }
+      } catch (e) {
+        // Continue testing next endpoint route
+      }
+    }
+    log(`[WAITING] Retrying Bot Approval Status for ID ${currentUserId}...`);
+  }
+
+  $("verifyBtn").onclick = async () => {
+    const gameId = $("gameUserIdInput").value.trim();
+    if (!gameId) {
+      toast("Enter Game User ID");
+      return;
+    }
+
+    currentUserId = gameId;
+    $("authStatusText").innerHTML = `<span class="dot pending"></span> Waiting for Bot Approval...`;
+    $("lockMsg").innerHTML = `ID <b>${gameId}</b> submitted.<br>Approve it in Bot to unlock.`;
+    toast("Request Sent!");
+    log(`Requesting Bot Access for ID: ${gameId}...`);
+
+    // Multi-path request submit call
+    const postUrls = [
+      `${BACKEND_URL}/request-access`,
+      `${BACKEND_URL}/api/request-ac    padding: 16px;
   }
 
   .popup-overlay.active {
